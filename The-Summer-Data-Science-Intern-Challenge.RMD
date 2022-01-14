@@ -1,0 +1,245 @@
+---
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+## The Summer Data Science Intern Challenge Data Set
+## By Chinedu H Obetta for an Internship Opportunity
+
+
+##     Load Packages
+```{r}
+library(readxl)  # To read files
+library(ggplot2) # To plot graphs etc 
+library(tidyverse)
+library(lubridate)
+```
+
+##   Environment Set up and Data Import
+```{r}
+setwd("C:/Users/Kenechi/Documents/SHOPIFY")
+shopify_data = read_xlsx("Winter Data Science Intern Challenge Data Set.xlsx")
+```
+
+ 
+##   Overview of the dataset
+```{r}
+dim(shopify_data)
+```
+Observation:
+
+*   The dataset contains seven(7) variables and 5000 observations.
+
+### Sanity Checks
+```{r}
+# To confirm that the data is read in properly 
+
+head(shopify_data)
+tail(shopify_data)
+names(shopify_data)
+```
+
+
+Observations:
+
+*   The values of the variable seems consistent.
+
+
+##  An Overview of the dataset
+
+```{r}
+
+summary(shopify_data)
+str(shopify_data)
+
+```
+
+
+#Observations:
+*   There are marked differences between the maximum value and the third quartiles in the variable "order_amount" and "total_items". The marked differences indicate the existence of outliers on the variables. 
+
+*   There are no missing values in the dataset.
+*   The variables "Shop_Id", "order_id", and "user_ID" were classified as numeric variables instead of factor variables. 
+*   The variable "payment_method' needs to be changed to a factor variable.
+Observed that the variable "created_at" is not formatted into date format.
+
+
+#Modification of the identified variables
+```{r}
+shopify_data$order_id = as.factor(shopify_data$order_id)
+shopify_data$shop_id = as.factor(shopify_data$shop_id)
+shopify_data$user_id = as.factor(shopify_data$user_id)
+shopify_data$payment_method = as.factor(shopify_data$payment_method)
+
+```
+
+
+##Summer 2022 Data Science Intern Challenge 
+
+# Question: On Shopify, we have exactly 100 sneaker shops, and each of these shops sells only one model of shoe. We want to do some analysis of the average order value (AOV). When we look at orders data over a 30 day window, we naively calculate an AOV of $3145.13. Given that we know these shops are selling sneakers, a relatively affordable item, something seems wrong with our analysis. 
+
+#Solutions
+
+```{r}
+summary(shopify_data$order_amount)
+```
+
+1a.i. Think about what could be going wrong with our calculation. 
+
+# Solutions:
+The issue with the calculation could be the wrong interpretation of the variable " the order-amount".  The variable "order_amount" is the sales realized for the selling of shoes across the 100 shops. Therefore, the calculated sum of $3,145.13, is the average sales volume per shop over a 30-day window.
+
+
+#1bi:    Think about a better way to evaluate this data. 
+
+Average Order Value(AOV) is the ratio of total order_amount to total_items. 
+
+This is calculated as follows;
+```{r}
+data_treated=shopify_data
+
+data_treated$aov_shop = data_treated$order_amount/data_treated$total_items
+head(data_treated[,c(2,8)], 10)
+AOV = mean(data_treated$aov_shop)
+AOV
+summary(data_treated$aov_shop)
+```
+
+#Observation:
+
+*   The average order value for Shopify using the mean is $387.7. However, a further review of the summarized values shows the existence of outliers. These call for further review.
+
+# Further analysis of the average order value across the 100 shops
+```{r}
+ 
+ggplot(data = data_treated, aes('', aov_shop )) +
+  geom_boxplot() + coord_trans(y = "log10") +
+   scale_y_continuous(breaks = c(50, 100,150,200,350,500,20000)) +
+  theme()
+
+```
+
+#Observations:
+
+The review of the boxplot above confirms the existence of outliers that must have influenced the mean of $387.7. It is not accurate to use the mean or median to determine the average order value for Shopify.
+
+
+# Calculation of Mode
+```{r}
+b = data_treated$aov_shop
+
+Mode_aov <- function(b) {
+ a <- table(b)
+ as.numeric(names(a)[a == max(a)])
+}
+
+Mode = Mode_aov(b)
+
+Mode
+```
+# Question 1b: What metric would you report for this dataset?
+
+I would report MODE as the metric for the dataset. Mode is another measure of central tendencies that can determine the average order value(AOV). The Mode, as a determinant, is not influenced by outliers like mean and median. 
+
+#Question 1c: c.	What is its value?
+
+The value is $153 as calculated above.
+
+
+*******FURTHER ANALYSIS*******
+
+#Analysis of the outliers
+```{r}
+ggplot(data = data_treated , aes( x = shop_id, y = aov_shop )) +
+  geom_boxplot() + coord_trans(y = "log10") +
+   scale_y_continuous(breaks = c(50, 100,150,200,350,500,20000)) +
+  theme()
+
+```
+#Observations
+
+*Over 90% of the AOV is less than $360.  Hence, a further review of the dataset to determine the specific shops responsible for the outliers.
+
+
+
+# Review of shops vis a vis AOV
+```{r}
+shops_with_outliers = data_treated %>% 
+
+select(shop_id, aov_shop) %>%
+  filter(aov_shop > 360)
+
+unique(shops_with_outliers)
+```
+
+#Observations:
+
+*   The AOV for the shop with ID 78 is $25,725 that is 168 times that of the reported AOV for Shopify. A further review of the dataset submitted by SHOPiD 78 could not reveal any notable trend. It could be that the dataset for the shop was not captured correctly.
+Kindly see below the analysis.
+
+```{r}
+
+data_treated$hour= hour(data_treated$created_at)
+data_treated$day = day(data_treated$created_at)
+data_treated$weekdays = weekdays(data_treated$created_at)
+
+
+case = data_treated %>%
+  select(shop_id, aov_shop, hour, day, weekdays) %>%
+  filter(shop_id ==78)
+
+table(case$day, case$weekdays)
+
+```
+
+
+# Question 2: For this question you’ll need to use SQL. Follow this link to access the data set required for the challenge. Please use queries to answer the following questions. Paste your queries along with your final numerical answers below.
+
+#a.	How many orders were shipped by Speedy Express in total?
+
+
+```{}
+
+#Solution: Speedy Express shipped 54 orders 
+
+SELECT COUNT(*)
+FROM Orders
+WHERE ShipperID == 1;
+
+```
+
+#b.	What is the last name of the employee with the most orders?
+
+```{}
+Solution: The Last Name of the employee with most orders is Peacock and the count is 40
+
+SELECT LastName, COUNT(*)
+FROM Employees
+	JOIN Orders
+    	ON Employees.EmployeeID = Orders.EmployeeID
+GROUP BY LastName
+ORDER BY COUNT(Orders.EmployeeID) DESC
+LIMIT 1
+```
+
+#c.	What product was ordered the most by customers in Germany?
+
+```{}
+
+Soluton: The product that was ordered most by customer in Germany is Steeleye Stout.
+
+SELECT ProductName, Country, Quantity
+FROM Products
+	JOIN OrderDetails
+    	ON Products.ProductID = OrderDetails.ProductID
+    JOIN Orders
+    	ON Orders.OrderID =OrderDetails.OrderID
+    JOIN Customers
+    	ON Customers.CustomerID = Orders.CustomerID
+        WHERE Country IS 'Germany'
+        GROUP BY ProductName
+        ORDER BY Quantity DESC
+
+
+```
